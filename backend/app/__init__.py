@@ -18,11 +18,11 @@ def create_app():
     bcrypt.init_app(app)
     migrate.init_app(app, db)
 
-    # ต้องอยู่ใน app_context เท่านั้น
-    with app.app_context():
-        from app import models
-        db.create_all()
+    # โหลด models
+    from app import models
 
+    # ✅ seed admin แบบปลอดภัย
+    with app.app_context():
         from app.seed import seed_admin
         seed_admin()
 
