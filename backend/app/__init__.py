@@ -5,8 +5,6 @@ from flask_cors import CORS
 from flask_migrate import Migrate
 from app.config import Config
 
-
-
 db = SQLAlchemy()
 bcrypt = Bcrypt()
 migrate = Migrate()
@@ -15,14 +13,18 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-
     CORS(app)
     db.init_app(app)
     bcrypt.init_app(app)
     migrate.init_app(app, db)
 
-    # โหลด models ก่อน
-    from app import models
+    # ต้องอยู่ใน app_context เท่านั้น
+    with app.app_context():
+        from app import models
+        db.create_all()
+
+        from app.seed import seed_admin
+        seed_admin()
 
     # register routes
     from app.routes.auth import auth_bp
