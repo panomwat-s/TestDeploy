@@ -1,0 +1,70 @@
+/* src/assign.css */
+@reference "./index.css";
+
+/* card */
+.card { @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-4; }
+@media (width >= 640px) { .card { padding: 1.25rem; } } /* sm:p-5 */
+
+/* header */
+.card-header { @apply flex items-center gap-3 mb-4; }
+.card-dot { @apply w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-700 shadow; }
+.card-title { @apply text-base font-semibold text-gray-800; }
+
+/* chip */
+.chip { @apply inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-slate-50 text-gray-600 border border-slate-200 hover:bg-blue-50 hover:text-blue-600 transition; }
+.chip-active { @apply bg-gradient-to-r from-blue-500 to-blue-600 text-white border-transparent shadow-sm; }
+
+/* buttons */
+.btn-primary { @apply inline-flex items-center justify-center bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg text-sm shadow-md hover:shadow-lg transition disabled:opacity-60 disabled:cursor-not-allowed; }
+.btn-secondary { @apply px-4 py-2 rounded-lg text-sm border border-slate-200 bg-white text-gray-700 hover:bg-slate-50 transition; }
+
+/* form */
+.form-label { @apply block text-sm font-medium text-gray-700 mb-1; }
+.form-input { @apply w-full min-h-[42px] text-sm rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition; }
+
+/* toolbar */
+.toolbar { @apply flex items-center gap-3 bg-white border border-gray-100 rounded-2xl p-3 shadow-sm; }
+
+/* table */
+.th { @apply px-4 py-3 font-medium text-gray-600 text-xs uppercase tracking-wide; }
+.td { @apply px-4 py-3 align-middle; }
+
+/* priority badges */
+.priority-badge { @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold; }
+.priority-high { @apply bg-red-50 text-red-700 border border-red-200; }
+.priority-medium { @apply bg-amber-50 text-amber-700 border border-amber-200; }
+.priority-low { @apply bg-emerald-50 text-emerald-700 border border-emerald-200; }
+
+/* icon */
+.icon-danger { @apply inline-flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition; }
+
+/* skeleton / empty */
+.skeleton { @apply animate-pulse bg-slate-200/70; }
+.empty-bubble { @apply w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 shadow-md; }
+
+/* ==== Card Table (สำหรับ Assign page) ==== */
+.card-table { 
+  @apply bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden; 
+}
+
+.card-table-head { 
+  @apply flex items-center justify-between p-5 border-b border-gray-100; 
+}
+.card-table-title { @apply font-semibold text-gray-900; }
+.card-table-meta { @apply text-xs text-gray-500; }
+
+/* ตารางภายใน */
+.table { @apply min-w-full text-sm; }
+.table thead tr { @apply bg-gray-50/80 border-t border-b border-gray-100; }
+.table thead th { @apply px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs uppercase tracking-wide; }
+.table tbody td { @apply px-4 py-3 text-gray-700 whitespace-nowrap border-b border-slate-100; }
+.table tbody tr:last-child td { @apply border-b-0; }
+
+/* zebra + hover */
+.table tbody tr:nth-child(even) { @apply bg-slate-50/40; }
+.table tbody tr:hover { @apply bg-slate-50/80 transition; }
+
+/* ระยะขอบเท่า header */
+.table thead th:first-child, .table tbody td:first-child { @apply pl-5; }
+.table thead th:last-child,  .table tbody td:last-child  { @apply pr-5; }
+
