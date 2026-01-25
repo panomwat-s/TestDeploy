@@ -23,7 +23,7 @@ def create_app():
 
     # ✅ seed admin แบบปลอดภัย
     with app.app_context():
-        from app.seed import seed_admin
+        from app.utils.seed import seed_admin
         seed_admin()
 
     # register routes
