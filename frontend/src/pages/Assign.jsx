@@ -12,6 +12,40 @@ export default function Assign() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  // แปลงความสำคัญเป็นภาษาไทย
+  const priorityLabel = (p) => {
+    switch (p) {
+      case "High": return "เร่งด่วน";
+      case "Medium": return "ปานกลาง";
+      case "Low": return "ต่ำ";
+      default: return "-";
+    }
+  };
+
+  // แปลงชื่อความสำคัญสำหรับ Filter button
+  const priorityFilterLabel = (p) => {
+    switch (p) {
+      case "All": return "ทั้งหมด";
+      case "High": return "เร่งด่วน";
+      case "Medium": return "ปานกลาง";
+      case "Low": return "ต่ำ";
+      default: return p;
+    }
+  };
+
+  // แปลงสถานะเป็นภาษาไทย
+  const statusLabel = (s) => {
+    const normalized = (s || "open").toLowerCase().replace(/\s+/g, "_");
+    switch (normalized) {
+      case "open": return "เปิดงาน";
+      case "in_progress": return "ระหว่างดำเนินการ";
+      case "resolved": return "เสร็จสิ้น";
+      case "complete": return "เสร็จสิ้น";
+      case "closed": return "ปิดงาน";
+      default: return "-";
+    }
+  };
+
   const [form, setForm] = useState({
     title: "",
     assignee_id: "",
@@ -92,7 +126,7 @@ export default function Assign() {
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-              Assign งาน
+              Assign
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               จัดการมอบหมายงานให้ทีม • {loading ? "กำลังโหลด…" : `พบ ${filtered.length} รายการ`}
@@ -106,7 +140,7 @@ export default function Assign() {
                 onClick={() => setPriorityFilter(p)}
                 className={`chip ${priorityFilter === p ? "chip-active" : ""}`}
               >
-                <Filter size={14} className="mr-1" /> {p}
+                <Filter size={14} className="mr-1" /> {priorityFilterLabel(p)}
               </button>
             ))}
           </div>
@@ -171,19 +205,21 @@ export default function Assign() {
                 value={form.priority}
                 onChange={(e) => setForm({ ...form, priority: e.target.value })}
               >
-                {["Low", "Medium", "High"].map(p => <option key={p} value={p}>{p}</option>)}
+                {["Low", "Medium", "High"].map(p => (
+                  <option key={p} value={p}>{priorityLabel(p)}</option>
+                ))}
               </select>
             </div>
 
             <div className="md:col-span-2">
               <label className="form-label">รายละเอียด</label>
               <textarea
-                rows="5"  // กำหนดสูงกี่บรรทัดคงที่ เช่น 5 บรรทัด
+                rows="5"
                 className="form-input"
                 value={form.details}
                 onChange={(e) => setForm({ ...form, details: e.target.value })}
                 placeholder="รายละเอียดงานเพิ่มเติม (ถ้ามี)"
-                style={{ resize: "none" }} // ปิดไม่ให้ user ปรับขนาดเอง
+                style={{ resize: "none" }}
               />
             </div>
 
@@ -244,21 +280,18 @@ export default function Assign() {
                         (t.priority === "High" ? "priority-high" :
                           t.priority === "Medium" ? "priority-medium" : "priority-low")
                       }>
-                        {t.priority || "-"}
+                        {priorityLabel(t.priority)}
                       </span>
                     </td>
                     <td className="td">
                       <span className={
                         "priority-badge " +
-                        ((t.status || "open") === "closed" ? "priority-low" :   // ใส่โทนที่อยากใช้
-                          (t.status || "open") === "resolved" ? "priority-medium" :
-                            (t.status || "open") === "in_progress" ? "priority-medium" : "priority-low")
+                        ((t.status || "open").toLowerCase().replace(/\s+/g, "_") === "closed" ? "priority-low" :
+                          (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "resolved" ? "priority-low" :
+                            (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "in_progress" ? "priority-medium" :
+                              "priority-low")  // ← เพิ่มกรณี default
                       }>
-                        {(t.status || "open")
-                          .replace("in_progress", "กำลังดำเนินการ")
-                          .replace("open", "Open")
-                          .replace("resolved", "เสร็จสิ้น")
-                          .replace("closed", "ปิดงาน")}
+                        {statusLabel(t.status)}
                       </span>
                     </td>
                     <td className="td">{t.due_date ? ("" + t.due_date).slice(0, 10) : "-"}</td>
