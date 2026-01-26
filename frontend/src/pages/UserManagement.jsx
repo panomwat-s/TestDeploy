@@ -18,20 +18,34 @@ export default function UserManagement() {
   async function loadUsers() {
     try {
       setLoading(true);
-      const res = await api.get("/users");
-      console.log("Users data:", res.data); // ดูข้อมูลที่ได้
+
+      const me = await api.get("/auth/me");
+      const role = me.data.user.role?.toLowerCase();
+
+      if (role !== "admin") {
+        setError("คุณไม่มีสิทธิ์เข้าใช้งานหน้านี้");
+        setUsers([]);
+        return;
+      }
+
+      const res = await api.get("/users/");
       setUsers(res.data || []);
     } catch (e) {
-      setError("ไม่สามารถโหลดข้อมูลผู้ใช้ได้");
-      console.error("Load users error:", e);
+      if (e?.response?.status === 403) {
+        setError("สิทธิ์ไม่เพียงพอ (Admin เท่านั้น)");
+      } else {
+        setError("ไม่สามารถโหลดข้อมูลผู้ใช้ได้");
+      }
     } finally {
       setLoading(false);
     }
   }
 
+  /* ✅ ต้องมี */
   useEffect(() => {
     loadUsers();
   }, []);
+
 
   /* ===================== CREATE USER ===================== */
   async function createUser(e) {
@@ -45,11 +59,11 @@ export default function UserManagement() {
     }
 
     try {
-      const res = await api.post("/users", {
+      const res = await api.post("/users/", {
         ...form,
         role: form.role.toLowerCase(), // ⭐ แปลง role เป็น lowercase
       });
-      const tempPassword = res.data.temp_password;
+      const tempPassword = res.data.temp_password || res.data.new_password;
 
       const copy = window.confirm(
         `สร้างผู้ใช้สำเร็จ 🎉\n\nTemporary Password:\n${tempPassword}\n\nกด OK เพื่อคัดลอก`
@@ -204,8 +218,8 @@ export default function UserManagement() {
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
                 className="form-input bg-white"
               >
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
+                <option value="user">ผู้ดูแลระบบ</option>
+                <option value="admin">ผู้ใช้งาน</option>
 
               </select>
             </div>
