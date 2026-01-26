@@ -13,16 +13,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # ✅ แก้ CORS ให้ละเอียดขึ้น
-    CORS(app, resources={
-        r"/api/*": {
-            "origins": ["http://localhost:5173", "http://localhost:3000", "http://localhost:5174"],
-            "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"],
-            "supports_credentials": True
-        }
-    })
-    
+    CORS(app)
     db.init_app(app)
     bcrypt.init_app(app)
     migrate.init_app(app, db)

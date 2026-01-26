@@ -11,7 +11,7 @@ export default function UserManagement() {
   const [form, setForm] = useState({
     username: "",
     email: "",
-    role: "User",
+    role: "user",
   });
 
   /* ===================== LOAD USERS ===================== */
@@ -62,7 +62,7 @@ export default function UserManagement() {
         setSuccess("สร้างผู้ใช้สำเร็จ");
       }
 
-      setForm({ username: "", email: "", role: "User" });
+      setForm({ username: "", email: "", role: "user" });
       loadUsers();
     } catch (e) {
       setError(e?.response?.data?.error || "สร้างผู้ใช้ไม่สำเร็จ");
@@ -129,7 +129,7 @@ export default function UserManagement() {
   }
 
   /* ===================== UI ===================== */
-  
+
   // แปลง role เป็นภาษาไทย
   const roleLabel = (role) => {
     switch ((role || "").toLowerCase()) {
@@ -159,7 +159,7 @@ export default function UserManagement() {
 
         {/* Alert Messages */}
         {error && <div className="alert-error">{error}</div>}
-        
+
         {success && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
             {success}
@@ -204,13 +204,14 @@ export default function UserManagement() {
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
                 className="form-input bg-white"
               >
-                <option>User</option>
-                <option>Admin</option>
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+
               </select>
             </div>
 
             <div className="flex items-end">
-              <button 
+              <button
                 type="submit"
                 className="bg-blue-600 text-white rounded px-4 py-2 text-sm inline-flex items-center justify-center hover:bg-blue-700 w-full"
               >
