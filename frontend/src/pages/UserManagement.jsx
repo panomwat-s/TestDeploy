@@ -45,7 +45,10 @@ export default function UserManagement() {
     }
 
     try {
-      const res = await api.post("/users", form);
+      const res = await api.post("/users", {
+        ...form,
+        role: form.role.toLowerCase(), // ⭐ แปลง role เป็น lowercase
+      });
       const tempPassword = res.data.temp_password;
 
       const copy = window.confirm(
@@ -126,6 +129,19 @@ export default function UserManagement() {
   }
 
   /* ===================== UI ===================== */
+  
+  // แปลง role เป็นภาษาไทย
+  const roleLabel = (role) => {
+    switch ((role || "").toLowerCase()) {
+      case "admin":
+        return "ผู้ดูแลระบบ";
+      case "user":
+        return "ผู้ใช้งาน";
+      default:
+        return "-";
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -241,14 +257,19 @@ export default function UserManagement() {
                       <td className="td font-medium text-gray-900">{u.username}</td>
                       <td className="td">{u.email}</td>
                       <td className="td">
-                        <span className={
-                          "priority-badge " + (u.role === "Admin" ? "priority-high" : "priority-medium")
-                        }>
-                          {u.role}
+                        <span
+                          className={
+                            "priority-badge " +
+                            (u.role?.toLowerCase() === "admin"
+                              ? "priority-high"
+                              : "priority-medium")
+                          }
+                        >
+                          {roleLabel(u.role)}
                         </span>
                       </td>
                       <td className="td">
-                        {u.role !== "Admin" ? (
+                        {u.role?.toLowerCase() !== "admin" ? (
                           <div className="flex gap-2">
                             <button
                               onClick={() => resetPassword(u.id, u.username)}

@@ -2,14 +2,13 @@
 from flask import Blueprint, request, jsonify
 from app.models import User
 from app import db, bcrypt
-from app.utils.authz import require_roles, jwt_required
+from app.utils.authz import require_roles
 import random, string
 
 users_bp = Blueprint("users", __name__)
 
 # GET all users
 @users_bp.get("/")
-@jwt_required
 @require_roles("admin")
 def get_users():
     users = User.query.all()
@@ -25,7 +24,6 @@ def get_users():
 
 # CREATE user
 @users_bp.post("/")
-@jwt_required
 @require_roles("admin")
 def create_user():
     data = request.get_json()
@@ -34,7 +32,7 @@ def create_user():
     user = User(
         username=data["username"],
         email=data["email"],
-        role=data.get("role", "User"),
+        role=data.get("role", "user").lower(),  # ← เพิ่ม .lower()
         password_hash=bcrypt.generate_password_hash(password).decode(),
         is_temp_password=True
     )
@@ -49,21 +47,19 @@ def create_user():
 
 # RESET password
 @users_bp.post("/<int:user_id>/reset")
-@jwt_required
 @require_roles("admin")
 def reset_password(user_id):
     user = User.query.get_or_404(user_id)
-    new_password = "welcome123"
+    new_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
 
     user.password_hash = bcrypt.generate_password_hash(new_password).decode()
     user.is_temp_password = True
     db.session.commit()
 
-    return jsonify({"new_password": new_password})
+    return jsonify({"temp_password": new_password})
 
 # DISABLE user
 @users_bp.post("/<int:user_id>/disable")
-@jwt_required
 @require_roles("admin")
 def disable_user(user_id):
     user = User.query.get_or_404(user_id)
@@ -72,7 +68,6 @@ def disable_user(user_id):
     return jsonify({"message": "disabled"})
 
 @users_bp.patch("/<int:user_id>/enable")
-@jwt_required
 @require_roles("admin")
 def enable_user(user_id):
     user = User.query.get_or_404(user_id)
@@ -82,7 +77,6 @@ def enable_user(user_id):
 
 # DELETE user
 @users_bp.delete("/<int:user_id>")
-@jwt_required
 @require_roles("admin")
 def delete_user(user_id):
     user = User.query.get_or_404(user_id)
@@ -91,7 +85,7 @@ def delete_user(user_id):
     return jsonify({"message": "deleted"})
 
 @users_bp.get("/assignable")
-@jwt_required
+@require_roles("admin", "user")
 def assignable_users():
     users = User.query.filter_by(is_active=True).all()
     return jsonify([
@@ -101,4 +95,3 @@ def assignable_users():
             "email": u.email,
         } for u in users
     ])
-
