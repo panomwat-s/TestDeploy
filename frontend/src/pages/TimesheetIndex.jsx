@@ -1,7 +1,7 @@
 // src/pages/TimesheetList.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../services/api";
-import { Trash2, X } from "lucide-react";
+import { Trash2, X, Eye } from "lucide-react";
 import "../assign.css";
 
 export default function TimesheetList() {
@@ -113,13 +113,28 @@ export default function TimesheetList() {
                       <td className="td font-medium text-gray-900">{t.title}</td>
                       <td className="td">{t.assignee_name || t.assignee?.name || "-"}</td>
                       <td className="td">
-                        <span className={
-                          "priority-badge " + (t.priority === "High"
-                            ? "priority-high" : t.priority === "Medium"
-                              ? "priority-medium" : "priority-low")
-                        }>{priorityLabel(t.priority)}</span>
+                        <span style={{
+                          color: t.priority === "High" ? "#dc2626" :
+                            t.priority === "Medium" ? "#f59e0b" : "#10b981",
+                          fontWeight: 500,
+                          fontSize: "0.875rem"
+                        }}>
+                          {priorityLabel(t.priority)}
+                        </span>
                       </td>
-                      <td className="td"><StatusBadge status={t.status} statusLabel={statusLabel} /></td>
+                      <td className="td">
+                        <span style={{
+                          color: ((t.status || "open").toLowerCase().replace(/\s+/g, "_") === "resolved" ||
+                            (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "complete" ||
+                            (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "closed") ? "#10b981" :
+                            (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "in_progress" ? "#f59e0b" :
+                              "#dc2626",
+                          fontWeight: 500,
+                          fontSize: "0.875rem"
+                        }}>
+                          {statusLabel(t.status)}
+                        </span>
+                      </td>
                       <td className="td">{t.due_date ? ("" + t.due_date).slice(0, 10) : "-"}</td>
                       <td className="td">
                         <button onClick={() => openEditor(t)} className="btn-secondary">
@@ -153,29 +168,59 @@ export default function TimesheetList() {
 
 /* ================= Components ================= */
 
-function StatusBadge({ status, statusLabel }) {
-  const normalized = (status || "Open").toLowerCase().replace(/\s+/g, "_");
-
-  const tone =
-    normalized === "in_progress" ? "priority-medium" :
-      normalized === "complete" ? "priority-low" :
-        normalized === "cancelled" ? "priority-low" :
-          normalized === "closed" ? "priority-low" : "priority-low";
-
-  return <span className={`priority-badge ${tone}`}>{statusLabel(status)}</span>;
-}
-
 function InlineTimesheetEditor({ task, onClose, onSaved, onClosed, statusLabel }) {
-  const [rows, setRows] = useState([{ work_date: "", start_time: "", end_time: "", detail: "" }]);
+  // ฟังก์ชันสร้างแถวใหม่พร้อมเวลาปัจจุบัน
+  const createNewRow = () => {
+    const now = new Date();
+    const currentTime = now.toTimeString().slice(0, 5); // HH:MM
+    const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    return {
+      work_date: currentDate,
+      start_time: currentTime,
+      end_time: "",
+      detail: ""
+    };
+  };
+
+  const [rows, setRows] = useState([createNewRow()]); // ใช้ฟังก์ชันสร้างแถวแรก
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const [timesheets, setTimesheets] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // ดึงข้อมูล timesheet ที่บันทึกแล้ว
+  async function fetchTimesheets() {
+    try {
+      setLoadingHistory(true);
+      const res = await api.get("/timesheet/", { params: { task_id: task.id } });
+      setTimesheets(res.data?.items || []);
+    } catch (e) {
+      console.error("โหลด timesheet ไม่สำเร็จ", e);
+      setTimesheets([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }
+
+  // โหลดข้อมูลตอนเปิด editor
+  useEffect(() => {
+    fetchTimesheets();
+  }, [task.id]);
 
   function onChange(i, key, val) {
     setRows(rs => rs.map((r, idx) => (idx === i ? { ...r, [key]: val } : r)));
   }
-  function addRow() { setRows(rs => [...rs, { work_date: "", start_time: "", end_time: "", detail: "" }]); }
-  function removeRow(i) { setRows(rs => rs.filter((_, idx) => idx !== i)); }
+
+  function addRow() {
+    setRows(rs => [...rs, createNewRow()]); // ใช้ฟังก์ชันสร้างแถวใหม่
+  }
+
+  function removeRow(i) {
+    setRows(rs => rs.filter((_, idx) => idx !== i));
+  }
 
   // ตรวจเวลา "ชน" ภายในฟอร์มเดียวกัน
   const hasOverlap = useMemo(() => {
@@ -212,7 +257,8 @@ function InlineTimesheetEditor({ task, onClose, onSaved, onClosed, statusLabel }
       setSaving(true);
       await api.post("/timesheet/bulk", { entries });
       setMsg("บันทึกสำเร็จ");
-      setRows([{ work_date: "", start_time: "", end_time: "", detail: "" }]);
+      setRows([createNewRow()]); // รีเซ็ตด้วยเวลาปัจจุบัน
+      await fetchTimesheets();
       onSaved && (await onSaved());
     } catch (e) {
       setErr(e?.response?.data?.error || "บันทึกไม่สำเร็จ");
@@ -235,37 +281,89 @@ function InlineTimesheetEditor({ task, onClose, onSaved, onClosed, statusLabel }
     }
   }
 
-return (
-  <div className="card">
-    {/* Header */}
-    <div className="px-5 py-4 border-b border-gray-300">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="card-dot" />
-          <div>
-            <h3 className="card-title">Timesheet</h3>
-            <p className="text-xs text-gray-500 mt-1">
-              รหัส {task.task_code || `TS-${String(task.id).padStart(4, "0")}`} • ผู้รับผิดชอบ {task.assignee_name || task.assignee?.name || "-"} • สถานะ <strong>{statusLabel(task.status)}</strong>
-            </p>
+  return (
+    <div className="card">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-gray-300">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="card-dot" />
+            <div>
+              <h3 className="card-title">Timesheet</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                รหัส {task.task_code || `TS-${String(task.id).padStart(4, "0")}`} • ผู้รับผิดชอบ {task.assignee_name || task.assignee?.name || "-"} • สถานะ <strong>{statusLabel(task.status)}</strong>
+              </p>
+            </div>
+          </div>
+
+          {/* ปุ่มด้านขวา */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="btn-secondary inline-flex items-center justify-center gap-1 min-w-[120px]"
+            >
+              <Eye className="w-4 h-4" /> {showHistory ? "ซ่อนประวัติ" : "ดูประวัติ"}
+            </button>
+            {task.status !== "Complete" && (
+              <button onClick={closeTask} className="btn-secondary inline-flex items-center justify-center gap-1 min-w-[120px]">
+                ปิดงาน
+              </button>
+            )}
+            <button onClick={onClose} className="btn-secondary inline-flex items-center justify-center gap-1 min-w-[120px]">
+              <X className="w-4 h-4" /> ปิดฟอร์ม
+            </button>
           </div>
         </div>
-        
-        {/* ปุ่มด้านขวา */}
-        <div className="flex items-center gap-2">
-          {task.status !== "Complete" && (
-            <button onClick={closeTask} className="btn-secondary inline-flex items-center justify-center gap-1 min-w-[120px]">
-              ปิดงาน
-            </button>
-          )}
-          <button onClick={onClose} className="btn-secondary inline-flex items-center justify-center gap-1 min-w-[120px]">
-            <X className="w-4 h-4" /> ปิดฟอร์ม
-          </button>
-        </div>
       </div>
-    </div>
 
       {err && <div className="alert-error mb-3">{err}</div>}
       {msg && <div className="mb-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-2xl p-3 text-sm">{msg}</div>}
+
+      {/* ประวัติการบันทึกเวลา */}
+      {showHistory && (
+        <div className="mb-4 border-b border-gray-200 pb-4">
+          <h4 className="text-sm font-semibold text-gray-700 mb-3 px-5">ประวัติการบันทึกเวลา</h4>
+          {loadingHistory ? (
+            <div className="px-5 py-4 text-center text-gray-400">กำลังโหลด...</div>
+          ) : timesheets.length === 0 ? (
+            <div className="px-5 py-4 text-center text-gray-400">ยังไม่มีการบันทึก</div>
+          ) : (
+            <div className="overflow-x-auto px-5">
+              <table className="table w-full">
+                <thead>
+                  <tr>
+                    <th className="th" style={{ minWidth: '200px' }}>รายละเอียด</th>
+                    <th className="th" style={{ minWidth: '150px' }}>บันทึกเมื่อ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {timesheets.map(x => (
+                    <tr key={x.id}>
+                      <td className="td" style={{ maxWidth: '400px', whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                        {x.notes || x.note || "-"}
+                      </td>
+                      <td className="td">
+                        {x.created_at
+                          ? (() => {
+                            const date = new Date(new Date(x.created_at).getTime() + (7 * 60 * 60 * 1000));
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                            const month = monthNames[date.getMonth()];
+                            const year = date.getFullYear(); // แปลงเป็น พ.ศ.
+                            const time = date.toTimeString().slice(0, 5);
+                            return `${day}/${month}/${year} ${time}`;
+                          })()
+                          : "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="card-table !p-0 !shadow-none !border-0">
         <div className="card-table-head">
@@ -295,16 +393,31 @@ return (
               {rows.map((r, i) => (
                 <tr key={i}>
                   <td className="td">
-                    <input type="date" className="form-input" value={r.work_date}
-                      onChange={(e) => onChange(i, "work_date", e.target.value)} />
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={r.work_date}
+                      onChange={(e) => onChange(i, "work_date", e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
                   </td>
                   <td className="td">
-                    <input type="time" className="form-input" value={r.start_time}
-                      onChange={(e) => onChange(i, "start_time", e.target.value)} />
+                    <input
+                      type="time"
+                      className="form-input"
+                      value={r.start_time}
+                      onChange={(e) => onChange(i, "start_time", e.target.value)}
+                      step="900"
+                    />
                   </td>
                   <td className="td">
-                    <input type="time" className="form-input" value={r.end_time}
-                      onChange={(e) => onChange(i, "end_time", e.target.value)} />
+                    <input
+                      type="time"
+                      className="form-input"
+                      value={r.end_time}
+                      onChange={(e) => onChange(i, "end_time", e.target.value)}
+                      step="900"
+                    />
                   </td>
                   <td className="td">
                     <input className="form-input" placeholder="รายละเอียดงานช่วงเวลานี้…"

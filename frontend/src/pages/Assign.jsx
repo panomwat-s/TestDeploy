@@ -54,6 +54,15 @@ export default function Assign() {
     details: "",
   });
 
+  // ฟังก์ชันสำหรับ format วันที่เป็น YYYY-MM-DD
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // โหลด user (role=User)
   async function fetchMembers() {
     try {
@@ -88,7 +97,7 @@ export default function Assign() {
 
   async function onSubmit(e) {
     e.preventDefault();
-    if (!form.title || !form.assignee_id) return;
+    if (!form.title || !form.assignee_id || !form.due_date) return;
 
     setSubmitting(true);
     try {
@@ -97,7 +106,7 @@ export default function Assign() {
         assignee_id: Number(form.assignee_id),
         due_date: form.due_date || null,
       });
-      setForm(f => ({ ...f, title: "", details: "" }));
+      setForm(f => ({ ...f, title: "", details: "", due_date: "" }));
       fetchTasks();
     } catch {
       setError("สร้างงานไม่สำเร็จ");
@@ -161,7 +170,9 @@ export default function Assign() {
 
           <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="form-label">หัวข้องาน</label>
+              <label className="form-label">
+                หัวข้องาน <span className="text-red-500">*</span>
+              </label>
               <input
                 className="form-input"
                 value={form.title}
@@ -172,7 +183,9 @@ export default function Assign() {
             </div>
 
             <div>
-              <label className="form-label">ผู้รับผิดชอบ</label>
+              <label className="form-label">
+                ผู้รับผิดชอบ <span className="text-red-500">*</span>
+              </label>
               <select
                 className="form-input bg-white"
                 value={form.assignee_id}
@@ -189,12 +202,16 @@ export default function Assign() {
             </div>
 
             <div>
-              <label className="form-label">กำหนดส่ง</label>
+              <label className="form-label">
+                กำหนดส่ง <span className="text-red-500">*</span>
+              </label>
               <input
                 type="date"
                 className="form-input"
                 value={form.due_date}
                 onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+                min={getTodayDate()}
+                required
               />
             </div>
 
@@ -227,7 +244,7 @@ export default function Assign() {
             <div className="md:col-span-2 flex justify-center pt-2">
               <button
                 type="submit"
-                disabled={!form.title.trim() || !form.assignee_id || submitting}
+                disabled={!form.title.trim() || !form.assignee_id || !form.due_date || submitting}
                 className="bg-blue-600 text-white rounded px-4 py-2 text-sm inline-flex items-center justify-center hover:bg-blue-700 disabled:opacity-50"
               >
                 {submitting ? (
@@ -275,22 +292,25 @@ export default function Assign() {
                     <td className="td font-medium text-gray-900">{t.title}</td>
                     <td className="td">{t.assignee_name || t.assignee?.name || "-"}</td>
                     <td className="td">
-                      <span className={
-                        "priority-badge " +
-                        (t.priority === "High" ? "priority-high" :
-                          t.priority === "Medium" ? "priority-medium" : "priority-low")
-                      }>
+                      <span style={{
+                        color: t.priority === "High" ? "#dc2626" :
+                          t.priority === "Medium" ? "#f59e0b" : "#10b981",
+                        fontWeight: 500,
+                        fontSize: "0.875rem"
+                      }}>
                         {priorityLabel(t.priority)}
                       </span>
                     </td>
                     <td className="td">
-                      <span className={
-                        "priority-badge " +
-                        ((t.status || "open").toLowerCase().replace(/\s+/g, "_") === "closed" ? "priority-low" :
-                          (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "resolved" ? "priority-low" :
-                            (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "in_progress" ? "priority-medium" :
-                              "priority-low")  // ← เพิ่มกรณี default
-                      }>
+                      <span style={{
+                        color: ((t.status || "open").toLowerCase().replace(/\s+/g, "_") === "resolved" ||
+                          (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "complete" ||
+                          (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "closed") ? "#10b981" :
+                          (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "in_progress" ? "#f59e0b" :
+                            "#dc2626",
+                        fontWeight: 500,
+                        fontSize: "0.875rem"
+                      }}>
                         {statusLabel(t.status)}
                       </span>
                     </td>

@@ -63,17 +63,12 @@ export default function Dashboard() {
       acc[k] = (acc[k] || 0) + 1;
       return acc;
     }, {});
-    const byPriority = tasks.reduce((acc, t) => {
-      const k = t.priority || "Medium";
-      acc[k] = (acc[k] || 0) + 1;
-      return acc;
-    }, { Low: 0, Medium: 0, High: 0 });
 
     return {
       total: tasks.length,
+      open: byStatus.open || 0,  // เปลี่ยนจาก urgent เป็น open
       inProgress: byStatus.in_progress || 0,
       done: (byStatus.complete || 0) + (byStatus.resolved || 0) + (byStatus.closed || 0),
-      urgent: byPriority.High || 0,
     };
   }, [tasks]);
 
@@ -135,9 +130,9 @@ export default function Dashboard() {
         {/* KPI Cards */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard title="งานทั้งหมด" value={loading ? "…" : kpis.total} icon={<BarChart3 className="w-4 h-4" />} tone="from-indigo-500 to-violet-500" />
+          <KpiCard title="เปิดงาน" value={loading ? "…" : kpis.open} icon={<AlertTriangle className="w-4 h-4" />} tone="from-rose-500 to-pink-500" />
           <KpiCard title="ระหว่างดำเนินการ" value={loading ? "…" : kpis.inProgress} icon={<Clock className="w-4 h-4" />} tone="from-amber-500 to-orange-500" />
           <KpiCard title="เสร็จสิ้น" value={loading ? "…" : kpis.done} icon={<CheckCircle2 className="w-4 h-4" />} tone="from-emerald-500 to-teal-500" />
-          <KpiCard title="เร่งด่วน" value={loading ? "…" : kpis.urgent} icon={<AlertTriangle className="w-4 h-4" />} tone="from-rose-500 to-pink-500" />
         </section>
 
         {/* Charts + Priority */}
@@ -201,7 +196,7 @@ export default function Dashboard() {
               <div key={k} className="mb-4">
                 <div className="flex items-center justify-between mb-1 text-sm">
                   <span className="text-gray-700">{priorityLabel(k)}</span>
-                  <span className="text-gray-500">{priorityDist.pct[k] || 0}%</span>
+                  <span className="text-gray-500">{priorityDist.counts[k] || 0} งาน</span>
                 </div>
                 <div className="h-2 bg-gray-100 rounded">
                   <div
@@ -244,21 +239,25 @@ export default function Dashboard() {
                     <td className="td font-medium text-gray-900">{t.title}</td>
                     <td className="td">{t.assignee_name || t.assignee?.name || "-"}</td>
                     <td className="td">
-                      <span
-                        className={
-                          "priority-badge " +
-                          (t.priority === "High"
-                            ? "priority-high"
-                            : t.priority === "Medium"
-                              ? "priority-medium"
-                              : "priority-low")
-                        }
-                      >
+                      <span style={{
+                        color: t.priority === "High" ? "#dc2626" :
+                          t.priority === "Medium" ? "#f59e0b" : "#10b981",
+                        fontWeight: 500,
+                        fontSize: "0.875rem"
+                      }}>
                         {priorityLabel(t.priority)}
                       </span>
                     </td>
                     <td className="td">
-                      <span className={statusBadgeClass(t.status)}>
+                      <span style={{
+                        color: ((t.status || "open").toLowerCase().replace(/\s+/g, "_") === "resolved" ||
+                          (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "complete" ||
+                          (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "closed") ? "#10b981" :
+                          (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "in_progress" ? "#f59e0b" :
+                            "#dc2626",
+                        fontWeight: 500,
+                        fontSize: "0.875rem"
+                      }}>
                         {statusLabel(t.status)}
                       </span>
                     </td>
