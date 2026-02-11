@@ -98,7 +98,7 @@ export default function TimesheetList() {
                   <th className="th">ความสำคัญ</th>
                   <th className="th">สถานะ</th>
                   <th className="th">วันกำหนด</th>
-                  <th className="th">Actions</th>
+                  <th className="th">การดำเนินการ</th>
                 </tr>
               </thead>
               <tbody>

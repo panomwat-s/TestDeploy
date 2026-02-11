@@ -135,7 +135,7 @@ export default function Assign() {
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-              Assign
+              Assignment
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               จัดการมอบหมายงานให้ทีม • {loading ? "กำลังโหลด…" : `พบ ${filtered.length} รายการ`}

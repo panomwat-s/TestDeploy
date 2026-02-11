@@ -34,7 +34,7 @@ export default function Sidebar() {
 
   const menuItems = [
     { id: "home", label: "Home", icon: Home, href: "/dashboard" },
-    { id: "assign", label: "Assign", icon: FileText, href: "/assign", adminOnly: true, },
+    { id: "assign", label: "Assignment", icon: FileText, href: "/assign", adminOnly: true, },
     { id: "timesheet", label: "Time Sheet", icon: FolderOpen, href: "/timesheet" },
 
   ];
