@@ -22,12 +22,13 @@ def _parse_date(s: str):
 @task_bp.route("/", methods=["GET"])
 @jwt_required(optional=True)
 def list_tasks():
-    search    = request.args.get("search", "").strip()
-    priority  = request.args.get("priority")
-    status    = request.args.get("status")
-    page      = int(request.args.get("page", 1))
-    page_size = min(int(request.args.get("page_size", 20)), 100)
-    sort      = request.args.get("sort", "-created_at")
+    search      = request.args.get("search", "").strip()
+    priority    = request.args.get("priority")
+    status      = request.args.get("status")
+    assignee_id = request.args.get("assignee_id")  # ← เพิ่ม
+    page        = int(request.args.get("page", 1))
+    page_size   = min(int(request.args.get("page_size", 20)), 100)
+    sort        = request.args.get("sort", "-created_at")
 
     q = db.session.query(Task, User.username.label("assignee_name")).join(User, User.id == Task.assignee_id)
 
@@ -38,6 +39,8 @@ def list_tasks():
         q = q.filter(Task.priority == priority)
     if status:
         q = q.filter(Task.status == status)
+    if assignee_id:  # ← เพิ่ม
+        q = q.filter(Task.assignee_id == int(assignee_id))
 
     sort_field = sort.lstrip("-"); is_desc = sort.startswith("-")
     if hasattr(Task, sort_field):

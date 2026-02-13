@@ -11,6 +11,7 @@ export default function Assign() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [currentUser, setCurrentUser] = useState(null); // ← เพิ่ม
 
   // แปลงความสำคัญเป็นภาษาไทย
   const priorityLabel = (p) => {
@@ -63,6 +64,16 @@ export default function Assign() {
     return `${year}-${month}-${day}`;
   };
 
+  // ดึงข้อมูล current user ← เพิ่ม
+  async function fetchCurrentUser() {
+    try {
+      const res = await api.get("/auth/me");
+      setCurrentUser(res.data.user);
+    } catch {
+      setError("โหลดข้อมูลผู้ใช้ไม่สำเร็จ");
+    }
+  }
+
   // โหลด user (role=User)
   async function fetchMembers() {
     try {
@@ -80,11 +91,13 @@ export default function Assign() {
   async function fetchTasks() {
     setLoading(true);
     try {
+      const isUser = currentUser?.role?.toLowerCase() === "user";
       const res = await api.get("/tasks/", {
         params: {
           sort: "-created_at",
           priority: priorityFilter !== "All" ? priorityFilter : undefined,
           search: query || undefined,
+          assignee_id: isUser ? currentUser.id : undefined, // ← user เห็นแค่งานตัวเอง
         }
       });
       setTasks(res.data.data);
@@ -121,10 +134,18 @@ export default function Assign() {
     fetchTasks();
   }
 
+  // โหลด currentUser ครั้งแรก ← เพิ่ม
   useEffect(() => {
-    fetchMembers();
-    fetchTasks();
-  }, [query, priorityFilter]);
+    fetchCurrentUser();
+  }, []);
+
+  // โหลด tasks และ members หลังได้ currentUser ← แก้
+  useEffect(() => {
+    if (currentUser) {
+      fetchMembers();
+      fetchTasks();
+    }
+  }, [currentUser, query, priorityFilter]);
 
   const filtered = useMemo(() => tasks, [tasks]);
 
@@ -161,106 +182,105 @@ export default function Assign() {
           </div>
         )}
 
-        {/* Form Card */}
-        <section className="card">
-          <div className="card-header">
-            <div className="card-dot" />
-            <h2 className="card-title">เพิ่มงานใหม่</h2>
-          </div>
-
-          <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="form-label">
-                หัวข้องาน <span className="text-red-500">*</span>
-              </label>
-              <input
-                className="form-input"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="เช่น: สร้างหน้า Assign UI"
-                required
-              />
+        {/* Form Card - แสดงเฉพาะ admin ← เพิ่ม */}
+        {currentUser?.role?.toLowerCase() === "admin" && (
+          <section className="card">
+            <div className="card-header">
+              <div className="card-dot" />
+              <h2 className="card-title">เพิ่มงานใหม่</h2>
             </div>
 
-            <div>
-              <label className="form-label">
-                ผู้รับผิดชอบ <span className="text-red-500">*</span>
-              </label>
-              <select
-                className="form-input bg-white"
-                value={form.assignee_id}
-                onChange={(e) => setForm({ ...form, assignee_id: e.target.value })}
-                required
-              >
-                <option value="">-- เลือกผู้รับผิดชอบ --</option>
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.username || m.name || m.email}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">
+                  หัวข้องาน <span className="text-red-500">*</span>
+                </label>
+                <input
+                  className="form-input"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="เช่น: สร้างหน้า Assign UI"
+                  required
+                />
+              </div>
 
-            <div>
-              <label className="form-label">
-                กำหนดส่ง <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                className="form-input"
-                value={form.due_date}
-                onChange={(e) => setForm({ ...form, due_date: e.target.value })}
-                min={getTodayDate()}
-                required
-              />
-            </div>
+              <div>
+                <label className="form-label">
+                  ผู้รับผิดชอบ <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="form-input bg-white"
+                  value={form.assignee_id}
+                  onChange={(e) => setForm({ ...form, assignee_id: e.target.value })}
+                  required
+                >
+                  <option value="">-- เลือกผู้รับผิดชอบ --</option>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.username || m.name || m.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div>
-              <label className="form-label">ความสำคัญ</label>
-              <select
-                className="form-input bg-white"
-                value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: e.target.value })}
-              >
-                {["Low", "Medium", "High"].map(p => (
-                  <option key={p} value={p}>{priorityLabel(p)}</option>
-                ))}
-              </select>
-            </div>
+              <div>
+                <label className="form-label">
+                  กำหนดส่ง <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={form.due_date}
+                  onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+                  min={getTodayDate()}
+                  required
+                />
+              </div>
 
-            <div className="md:col-span-2">
-              <label className="form-label">รายละเอียด</label>
-              <textarea
-                rows="5"
-                className="form-input"
-                value={form.details}
-                onChange={(e) => setForm({ ...form, details: e.target.value })}
-                placeholder="รายละเอียดงานเพิ่มเติม (ถ้ามี)"
-                style={{ resize: "none" }}
-              />
-            </div>
+              <div>
+                <label className="form-label">ความสำคัญ</label>
+                <select
+                  className="form-input bg-white"
+                  value={form.priority}
+                  onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                >
+                  {["Low", "Medium", "High"].map(p => (
+                    <option key={p} value={p}>{priorityLabel(p)}</option>
+                  ))}
+                </select>
+              </div>
 
-            {/* ปุ่มเล็ก + อยู่กลาง */}
-            <div className="md:col-span-2 flex justify-center pt-2">
-              <button
-                type="submit"
-                disabled={!form.title.trim() || !form.assignee_id || !form.due_date || submitting}
-                className="bg-blue-600 text-white rounded px-4 py-2 text-sm inline-flex items-center justify-center hover:bg-blue-700 disabled:opacity-50"
-              >
-                {submitting ? (
-                  <Loader2 className="animate-spin mr-2" size={14} />
-                ) : (
-                  <Plus size={14} className="mr-2" />
-                )}
-                {submitting ? "กำลังบันทึก…" : "บันทึกงาน"}
-              </button>
-            </div>
-          </form>
-        </section>
+              <div className="md:col-span-2">
+                <label className="form-label">รายละเอียด</label>
+                <textarea
+                  rows="5"
+                  className="form-input"
+                  value={form.details}
+                  onChange={(e) => setForm({ ...form, details: e.target.value })}
+                  placeholder="รายละเอียดงานเพิ่มเติม (ถ้ามี)"
+                  style={{ resize: "none" }}
+                />
+              </div>
 
-        {/* Toolbar */}
+              <div className="md:col-span-2 flex justify-center pt-2">
+                <button
+                  type="submit"
+                  disabled={!form.title.trim() || !form.assignee_id || !form.due_date || submitting}
+                  className="bg-blue-600 text-white rounded px-4 py-2 text-sm inline-flex items-center justify-center hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {submitting ? (
+                    <Loader2 className="animate-spin mr-2" size={14} />
+                  ) : (
+                    <Plus size={14} className="mr-2" />
+                  )}
+                  {submitting ? "กำลังบันทึก…" : "บันทึกงาน"}
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
 
-        {/* Latest table (สไตล์เดียวกับ Dashboard) */}
+        {/* Latest table */}
         <section className="card-table">
           <div className="card-table-head">
             <h3 className="card-table-title">รายการงานล่าสุด</h3>
