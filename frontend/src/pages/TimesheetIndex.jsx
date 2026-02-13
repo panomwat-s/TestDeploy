@@ -164,7 +164,7 @@ export default function TimesheetList() {
                       <td className="td">{t.due_date ? ("" + t.due_date).slice(0, 10) : "-"}</td>
                       <td className="td">
                         <button onClick={() => openEditor(t)} className="btn-secondary">
-                          บันทึกเวลา
+                          ดำเนินการบันทึกงาน
                         </button>
                       </td>
                     </tr>
