@@ -102,7 +102,7 @@ export default function UserManagement() {
 
     try {
       const res = await api.post(`/users/${id}/reset`);
-      const tempPassword = res.data.temp_password;
+      const tempPassword = res.data.new_password;
 
       const copy = window.confirm(
         `Temporary Password: ${tempPassword}\n\nกด OK เพื่อคัดลอก`
@@ -218,8 +218,8 @@ export default function UserManagement() {
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
                 className="form-input bg-white"
               >
-                <option value="user">ผู้ดูแลระบบ</option>
-                <option value="admin">ผู้ใช้งาน</option>
+                <option value="admin">ผู้ดูแลระบบ</option>
+                <option value="user">ผู้ใช้งาน</option>
 
               </select>
             </div>
