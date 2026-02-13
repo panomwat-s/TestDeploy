@@ -12,6 +12,40 @@ export default function Assign() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  // แปลงความสำคัญเป็นภาษาไทย
+  const priorityLabel = (p) => {
+    switch (p) {
+      case "High": return "เร่งด่วน";
+      case "Medium": return "ปานกลาง";
+      case "Low": return "ต่ำ";
+      default: return "-";
+    }
+  };
+
+  // แปลงชื่อความสำคัญสำหรับ Filter button
+  const priorityFilterLabel = (p) => {
+    switch (p) {
+      case "All": return "ทั้งหมด";
+      case "High": return "เร่งด่วน";
+      case "Medium": return "ปานกลาง";
+      case "Low": return "ต่ำ";
+      default: return p;
+    }
+  };
+
+  // แปลงสถานะเป็นภาษาไทย
+  const statusLabel = (s) => {
+    const normalized = (s || "open").toLowerCase().replace(/\s+/g, "_");
+    switch (normalized) {
+      case "open": return "เปิดงาน";
+      case "in_progress": return "ระหว่างดำเนินการ";
+      case "resolved": return "เสร็จสิ้น";
+      case "complete": return "เสร็จสิ้น";
+      case "closed": return "ปิดงาน";
+      default: return "-";
+    }
+  };
+
   const [form, setForm] = useState({
     title: "",
     assignee_id: "",
@@ -19,6 +53,15 @@ export default function Assign() {
     priority: "Medium",
     details: "",
   });
+
+  // ฟังก์ชันสำหรับ format วันที่เป็น YYYY-MM-DD
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   // โหลด user (role=User)
   async function fetchMembers() {
@@ -54,7 +97,7 @@ export default function Assign() {
 
   async function onSubmit(e) {
     e.preventDefault();
-    if (!form.title || !form.assignee_id) return;
+    if (!form.title || !form.assignee_id || !form.due_date) return;
 
     setSubmitting(true);
     try {
@@ -63,7 +106,7 @@ export default function Assign() {
         assignee_id: Number(form.assignee_id),
         due_date: form.due_date || null,
       });
-      setForm(f => ({ ...f, title: "", details: "" }));
+      setForm(f => ({ ...f, title: "", details: "", due_date: "" }));
       fetchTasks();
     } catch {
       setError("สร้างงานไม่สำเร็จ");
@@ -92,7 +135,7 @@ export default function Assign() {
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-              Assign งาน
+              Assignment
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               จัดการมอบหมายงานให้ทีม • {loading ? "กำลังโหลด…" : `พบ ${filtered.length} รายการ`}
@@ -106,7 +149,7 @@ export default function Assign() {
                 onClick={() => setPriorityFilter(p)}
                 className={`chip ${priorityFilter === p ? "chip-active" : ""}`}
               >
-                <Filter size={14} className="mr-1" /> {p}
+                <Filter size={14} className="mr-1" /> {priorityFilterLabel(p)}
               </button>
             ))}
           </div>
@@ -127,7 +170,9 @@ export default function Assign() {
 
           <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="form-label">หัวข้องาน</label>
+              <label className="form-label">
+                หัวข้องาน <span className="text-red-500">*</span>
+              </label>
               <input
                 className="form-input"
                 value={form.title}
@@ -138,7 +183,9 @@ export default function Assign() {
             </div>
 
             <div>
-              <label className="form-label">ผู้รับผิดชอบ</label>
+              <label className="form-label">
+                ผู้รับผิดชอบ <span className="text-red-500">*</span>
+              </label>
               <select
                 className="form-input bg-white"
                 value={form.assignee_id}
@@ -155,12 +202,16 @@ export default function Assign() {
             </div>
 
             <div>
-              <label className="form-label">กำหนดส่ง</label>
+              <label className="form-label">
+                กำหนดส่ง <span className="text-red-500">*</span>
+              </label>
               <input
                 type="date"
                 className="form-input"
                 value={form.due_date}
                 onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+                min={getTodayDate()}
+                required
               />
             </div>
 
@@ -171,19 +222,21 @@ export default function Assign() {
                 value={form.priority}
                 onChange={(e) => setForm({ ...form, priority: e.target.value })}
               >
-                {["Low", "Medium", "High"].map(p => <option key={p} value={p}>{p}</option>)}
+                {["Low", "Medium", "High"].map(p => (
+                  <option key={p} value={p}>{priorityLabel(p)}</option>
+                ))}
               </select>
             </div>
 
             <div className="md:col-span-2">
               <label className="form-label">รายละเอียด</label>
               <textarea
-                rows="5"  // กำหนดสูงกี่บรรทัดคงที่ เช่น 5 บรรทัด
+                rows="5"
                 className="form-input"
                 value={form.details}
                 onChange={(e) => setForm({ ...form, details: e.target.value })}
                 placeholder="รายละเอียดงานเพิ่มเติม (ถ้ามี)"
-                style={{ resize: "none" }} // ปิดไม่ให้ user ปรับขนาดเอง
+                style={{ resize: "none" }}
               />
             </div>
 
@@ -191,7 +244,7 @@ export default function Assign() {
             <div className="md:col-span-2 flex justify-center pt-2">
               <button
                 type="submit"
-                disabled={!form.title.trim() || !form.assignee_id || submitting}
+                disabled={!form.title.trim() || !form.assignee_id || !form.due_date || submitting}
                 className="bg-blue-600 text-white rounded px-4 py-2 text-sm inline-flex items-center justify-center hover:bg-blue-700 disabled:opacity-50"
               >
                 {submitting ? (
@@ -239,26 +292,26 @@ export default function Assign() {
                     <td className="td font-medium text-gray-900">{t.title}</td>
                     <td className="td">{t.assignee_name || t.assignee?.name || "-"}</td>
                     <td className="td">
-                      <span className={
-                        "priority-badge " +
-                        (t.priority === "High" ? "priority-high" :
-                          t.priority === "Medium" ? "priority-medium" : "priority-low")
-                      }>
-                        {t.priority || "-"}
+                      <span style={{
+                        color: t.priority === "High" ? "#dc2626" :
+                          t.priority === "Medium" ? "#f59e0b" : "#10b981",
+                        fontWeight: 500,
+                        fontSize: "0.875rem"
+                      }}>
+                        {priorityLabel(t.priority)}
                       </span>
                     </td>
                     <td className="td">
-                      <span className={
-                        "priority-badge " +
-                        ((t.status || "open") === "closed" ? "priority-low" :   // ใส่โทนที่อยากใช้
-                          (t.status || "open") === "resolved" ? "priority-medium" :
-                            (t.status || "open") === "in_progress" ? "priority-medium" : "priority-low")
-                      }>
-                        {(t.status || "open")
-                          .replace("in_progress", "กำลังดำเนินการ")
-                          .replace("open", "Open")
-                          .replace("resolved", "เสร็จสิ้น")
-                          .replace("closed", "ปิดงาน")}
+                      <span style={{
+                        color: ((t.status || "open").toLowerCase().replace(/\s+/g, "_") === "resolved" ||
+                          (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "complete" ||
+                          (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "closed") ? "#10b981" :
+                          (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "in_progress" ? "#f59e0b" :
+                            "#dc2626",
+                        fontWeight: 500,
+                        fontSize: "0.875rem"
+                      }}>
+                        {statusLabel(t.status)}
                       </span>
                     </td>
                     <td className="td">{t.due_date ? ("" + t.due_date).slice(0, 10) : "-"}</td>

@@ -138,3 +138,25 @@ def change_password():
     db.session.commit()
 
     return jsonify({"message": "password changed"})
+
+@auth_bp.post("/init-admin")
+def init_admin():
+    # กันไม่ให้สร้างซ้ำ
+    if User.query.filter_by(role="Admin").first():
+        return jsonify({"message": "Admin already exists"}), 400
+
+    admin = User(
+        username="admin",
+        email="admin@example.com",
+        role="Admin",
+        password_hash=bcrypt.generate_password_hash("admin123").decode("utf-8")
+    )
+
+    db.session.add(admin)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Admin created",
+        "email": "admin@example.com",
+        "password": "admin123"
+    }), 201

@@ -32,13 +32,19 @@ def require_roles(*roles):
             except jwt.InvalidTokenError:
                 return jsonify({"error": "Invalid token"}), 401
 
-            if roles and payload.get("role") not in roles:
-                return jsonify({"error": "Forbidden"}), 403
+            # ✅ FIX ROLE CHECK (case-insensitive)
+            if roles:
+                user_role = payload.get("role", "").lower()
+                allowed_roles = [r.lower() for r in roles]
+
+                if user_role not in allowed_roles:
+                    return jsonify({"error": "Forbidden"}), 403
 
             g.user = payload
             return fn(*args, **kwargs)
         return inner
     return wrap
+
 
 
 def jwt_required(fn):

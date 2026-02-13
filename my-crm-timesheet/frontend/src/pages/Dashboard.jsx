@@ -18,7 +18,6 @@ export default function Dashboard() {
       try {
         setLoading(true);
         setError("");
-        // ใช้ page_size ให้ตรงกับ BE
         const res = await api.get("/tasks/", { params: { sort: "-created_at", page_size: 200 } });
         if (!mounted) return;
         setTasks(res.data?.data || []);
@@ -37,48 +36,43 @@ export default function Dashboard() {
 
   const statusLabel = (s) => {
     switch (norm(s)) {
-      case "open": return "Open";
-      case "in_progress": return "In Progress";
-      case "resolved": return "complete";
-      case "complete": return "Complete";
-      case "closed": return "closed";
-      default: return s || "-";
+      case "open": return "เปิดงาน";
+      case "in_progress": return "ระหว่างดำเนินการ";
+      case "resolved": return "เสร็จสิ้น";
+      case "complete": return "เสร็จสิ้น";
+      case "closed": return "เสร็จสิ้น";
+      default: return "-";
     }
   };
 
   const statusBadgeClass = (s) => {
     switch (norm(s)) {
       case "in_progress": return "priority-badge priority-medium";
-      case "resolved":    return "priority-badge priority-low";
-      case "complete":    return "priority-badge priority-low";
-      case "closed":      return "priority-badge priority-low";
+      case "resolved": return "priority-badge priority-low";
+      case "complete": return "priority-badge priority-low";
+      case "closed": return "priority-badge priority-low";
       case "open":
-      default:            return "priority-badge priority-medium";
+      default: return "priority-badge priority-medium";
     }
   };
 
-  // KPI summary (รวม Complete เป็น “เสร็จสิ้น”)
+  // KPI summary
   const kpis = useMemo(() => {
     const byStatus = tasks.reduce((acc, t) => {
       const k = norm(t.status);
       acc[k] = (acc[k] || 0) + 1;
       return acc;
     }, {});
-    const byPriority = tasks.reduce((acc, t) => {
-      const k = t.priority || "Medium";
-      acc[k] = (acc[k] || 0) + 1;
-      return acc;
-    }, { Low: 0, Medium: 0, High: 0 });
 
     return {
       total: tasks.length,
+      open: byStatus.open || 0,  // เปลี่ยนจาก urgent เป็น open
       inProgress: byStatus.in_progress || 0,
       done: (byStatus.complete || 0) + (byStatus.resolved || 0) + (byStatus.closed || 0),
-      urgent: byPriority.High || 0,
     };
   }, [tasks]);
 
-  // กราฟแท่งรายสัปดาห์จาก created_at
+  // กราฟแท่งรายสัปดาห์
   const weeklyBars = useMemo(() => {
     const buckets = new Map();
     tasks.forEach(t => {
@@ -107,19 +101,27 @@ export default function Dashboard() {
     return { counts, pct, total };
   }, [tasks]);
 
+  const priorityLabel = (p) => {
+    switch (p) {
+      case "High": return "เร่งด่วน";
+      case "Medium": return "ปานกลาง";
+      case "Low": return "ต่ำ";
+      default: return "-";
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen">
       <div className="mx-auto max-w-7xl space-y-6">
-        <header className="bg-white/60 backdrop-blur rounded-2xl border border-gray-100 shadow-sm">
-          <div className="px-5 py-4 flex items-center justify-between">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
-            <button
-              onClick={() => navigate("/assign")}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white 
-                     text-sm px-3 py-1.5 shadow hover:shadow-md transition disabled:opacity-60"
-            >
-              <Plus className="w-3.5 h-3.5" /> เพิ่มงาน
-            </button>
+        {/* Page header - ปรับให้เหมือน Assign */}
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+              Dashboard
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              ภาพรวมงานทั้งหมด • {loading ? "กำลังโหลด…" : `พบ ${tasks.length} รายการ`}
+            </p>
           </div>
         </header>
 
@@ -128,17 +130,20 @@ export default function Dashboard() {
         {/* KPI Cards */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard title="งานทั้งหมด" value={loading ? "…" : kpis.total} icon={<BarChart3 className="w-4 h-4" />} tone="from-indigo-500 to-violet-500" />
+          <KpiCard title="เปิดงาน" value={loading ? "…" : kpis.open} icon={<AlertTriangle className="w-4 h-4" />} tone="from-rose-500 to-pink-500" />
           <KpiCard title="ระหว่างดำเนินการ" value={loading ? "…" : kpis.inProgress} icon={<Clock className="w-4 h-4" />} tone="from-amber-500 to-orange-500" />
           <KpiCard title="เสร็จสิ้น" value={loading ? "…" : kpis.done} icon={<CheckCircle2 className="w-4 h-4" />} tone="from-emerald-500 to-teal-500" />
-          <KpiCard title="เร่งด่วน" value={loading ? "…" : kpis.urgent} icon={<AlertTriangle className="w-4 h-4" />} tone="from-rose-500 to-pink-500" />
         </section>
 
         {/* Charts + Priority */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Weekly Chart */}
+          {/* Weekly Chart - ใช้ card class */}
           <div className="card lg:col-span-2">
-            <div className="flex items-center justify-between mb-3">
+            <div className="card-header">
+              <div className="card-dot" />
               <h3 className="card-title">สถิติงานที่สร้างรายสัปดาห์</h3>
+            </div>
+            <div className="flex items-center justify-end mb-3">
               <span className="text-xs text-gray-500">ล่าสุด {weeklyBars.data?.length || 0} สัปดาห์</span>
             </div>
             <div className="h-56 w-full">
@@ -178,17 +183,20 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Priority distribution */}
+          {/* Priority distribution - ใช้ card class */}
           <div className="card">
-            <div className="flex items-center justify-between mb-3">
+            <div className="card-header">
+              <div className="card-dot" />
               <h3 className="card-title">ระดับความสำคัญ</h3>
+            </div>
+            <div className="flex items-center justify-end mb-3">
               <span className="text-xs text-gray-500">{priorityDist.total} งาน</span>
             </div>
             {["High", "Medium", "Low"].map((k) => (
               <div key={k} className="mb-4">
                 <div className="flex items-center justify-between mb-1 text-sm">
-                  <span className="text-gray-700">{k === "High" ? "เร่งด่วน" : k === "Medium" ? "ปานกลาง" : "ต่ำ"}</span>
-                  <span className="text-gray-500">{priorityDist.pct[k] || 0}%</span>
+                  <span className="text-gray-700">{priorityLabel(k)}</span>
+                  <span className="text-gray-500">{priorityDist.counts[k] || 0} งาน</span>
                 </div>
                 <div className="h-2 bg-gray-100 rounded">
                   <div
@@ -231,21 +239,25 @@ export default function Dashboard() {
                     <td className="td font-medium text-gray-900">{t.title}</td>
                     <td className="td">{t.assignee_name || t.assignee?.name || "-"}</td>
                     <td className="td">
-                      <span
-                        className={
-                          "priority-badge " +
-                          (t.priority === "High"
-                            ? "priority-high"
-                            : t.priority === "Medium"
-                              ? "priority-medium"
-                              : "priority-low")
-                        }
-                      >
-                        {t.priority || "-"}
+                      <span style={{
+                        color: t.priority === "High" ? "#dc2626" :
+                          t.priority === "Medium" ? "#f59e0b" : "#10b981",
+                        fontWeight: 500,
+                        fontSize: "0.875rem"
+                      }}>
+                        {priorityLabel(t.priority)}
                       </span>
                     </td>
                     <td className="td">
-                      <span className={statusBadgeClass(t.status)}>
+                      <span style={{
+                        color: ((t.status || "open").toLowerCase().replace(/\s+/g, "_") === "resolved" ||
+                          (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "complete" ||
+                          (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "closed") ? "#10b981" :
+                          (t.status || "open").toLowerCase().replace(/\s+/g, "_") === "in_progress" ? "#f59e0b" :
+                            "#dc2626",
+                        fontWeight: 500,
+                        fontSize: "0.875rem"
+                      }}>
                         {statusLabel(t.status)}
                       </span>
                     </td>
@@ -264,7 +276,7 @@ export default function Dashboard() {
   );
 }
 
-/* ============ small component for KPI ============ */
+/* ============ KPI Card Component ============ */
 function KpiCard({ title, value, tone, icon }) {
   return (
     <div className="group relative overflow-hidden bg-white rounded-2xl shadow border border-gray-100 p-5">

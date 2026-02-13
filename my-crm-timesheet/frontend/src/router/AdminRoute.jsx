@@ -6,7 +6,7 @@ import { Navigate } from "react-router-dom";
 const AdminRoute = ({ children }) => {
   const user = JSON.parse(localStorage.getItem("user")); // ดึงข้อมูล user จาก localStorage
 
-  if (user?.role !== "admin") {
+  if (user?.role !== "Admin") {
     return <Navigate to="/dashboard" />;  // ถ้าไม่ใช่ admin ให้ไปที่หน้า dashboard
   }
 

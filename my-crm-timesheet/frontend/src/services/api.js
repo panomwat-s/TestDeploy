@@ -2,7 +2,7 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || "http://localhost:5000/api", // ปรับให้ตรงของคุณ
+  baseURL: import.meta.env.VITE_API_BASE || "https://my-crm-timesheet-backend.onrender.com/api", // ปรับให้ตรงของคุณ
 });
 
 // แนบ JWT อัตโนมัติ
