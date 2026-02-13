@@ -9,6 +9,7 @@ export default function TimesheetList() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [activeTask, setActiveTask] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null); // ← เพิ่ม
   const editorRef = useRef(null);
 
   // แปลงความสำคัญเป็นภาษาไทย
@@ -34,11 +35,28 @@ export default function TimesheetList() {
     }
   };
 
+  // ดึงข้อมูล current user ← เพิ่ม
+  async function fetchCurrentUser() {
+    try {
+      const res = await api.get("/auth/me");
+      setCurrentUser(res.data.user);
+    } catch {
+      setErr("โหลดข้อมูลผู้ใช้ไม่สำเร็จ");
+    }
+  }
+
   async function fetchTasks() {
     try {
       setLoading(true);
       setErr("");
-      const res = await api.get("/tasks/", { params: { sort: "-created_at", page_size: 50 } });
+      const isUser = currentUser?.role?.toLowerCase() === "user";
+      const res = await api.get("/tasks/", {
+        params: {
+          sort: "-created_at",
+          page_size: 50,
+          assignee_id: isUser ? currentUser.id : undefined, // ← user เห็นแค่งานตัวเอง
+        }
+      });
       setTasks(res.data?.data || []);
     } catch (e) {
       setErr(e?.response?.data?.error || "โหลดรายการงานไม่สำเร็จ");
@@ -47,7 +65,15 @@ export default function TimesheetList() {
     }
   }
 
-  useEffect(() => { fetchTasks(); }, []);
+  // โหลด currentUser ครั้งแรก ← เพิ่ม
+  useEffect(() => {
+    fetchCurrentUser();
+  }, []);
+
+  // โหลด tasks หลังได้ currentUser ← แก้
+  useEffect(() => {
+    if (currentUser) fetchTasks();
+  }, [currentUser]);
 
   function openEditor(t) {
     setActiveTask(t);
@@ -68,7 +94,7 @@ export default function TimesheetList() {
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header - ปรับให้เหมือน Assign */}
+        {/* Header */}
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
@@ -169,12 +195,10 @@ export default function TimesheetList() {
 /* ================= Components ================= */
 
 function InlineTimesheetEditor({ task, onClose, onSaved, onClosed, statusLabel }) {
-  // ฟังก์ชันสร้างแถวใหม่พร้อมเวลาปัจจุบัน
   const createNewRow = () => {
     const now = new Date();
-    const currentTime = now.toTimeString().slice(0, 5); // HH:MM
-    const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
-
+    const currentTime = now.toTimeString().slice(0, 5);
+    const currentDate = now.toISOString().split('T')[0];
     return {
       work_date: currentDate,
       start_time: currentTime,
@@ -183,7 +207,7 @@ function InlineTimesheetEditor({ task, onClose, onSaved, onClosed, statusLabel }
     };
   };
 
-  const [rows, setRows] = useState([createNewRow()]); // ใช้ฟังก์ชันสร้างแถวแรก
+  const [rows, setRows] = useState([createNewRow()]);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
@@ -191,7 +215,6 @@ function InlineTimesheetEditor({ task, onClose, onSaved, onClosed, statusLabel }
   const [showHistory, setShowHistory] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // ดึงข้อมูล timesheet ที่บันทึกแล้ว
   async function fetchTimesheets() {
     try {
       setLoadingHistory(true);
@@ -205,7 +228,6 @@ function InlineTimesheetEditor({ task, onClose, onSaved, onClosed, statusLabel }
     }
   }
 
-  // โหลดข้อมูลตอนเปิด editor
   useEffect(() => {
     fetchTimesheets();
   }, [task.id]);
@@ -215,14 +237,13 @@ function InlineTimesheetEditor({ task, onClose, onSaved, onClosed, statusLabel }
   }
 
   function addRow() {
-    setRows(rs => [...rs, createNewRow()]); // ใช้ฟังก์ชันสร้างแถวใหม่
+    setRows(rs => [...rs, createNewRow()]);
   }
 
   function removeRow(i) {
     setRows(rs => rs.filter((_, idx) => idx !== i));
   }
 
-  // ตรวจเวลา "ชน" ภายในฟอร์มเดียวกัน
   const hasOverlap = useMemo(() => {
     const groups = new Map();
     rows.forEach(r => {
@@ -257,7 +278,7 @@ function InlineTimesheetEditor({ task, onClose, onSaved, onClosed, statusLabel }
       setSaving(true);
       await api.post("/timesheet/bulk", { entries });
       setMsg("บันทึกสำเร็จ");
-      setRows([createNewRow()]); // รีเซ็ตด้วยเวลาปัจจุบัน
+      setRows([createNewRow()]);
       await fetchTimesheets();
       onSaved && (await onSaved());
     } catch (e) {
@@ -267,7 +288,6 @@ function InlineTimesheetEditor({ task, onClose, onSaved, onClosed, statusLabel }
     }
   }
 
-  // ปิดงาน => Complete
   async function closeTask() {
     try {
       setSaving(true);
@@ -296,7 +316,6 @@ function InlineTimesheetEditor({ task, onClose, onSaved, onClosed, statusLabel }
             </div>
           </div>
 
-          {/* ปุ่มด้านขวา */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowHistory(!showHistory)}
@@ -350,7 +369,7 @@ function InlineTimesheetEditor({ task, onClose, onSaved, onClosed, statusLabel }
                             const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                               'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                             const month = monthNames[date.getMonth()];
-                            const year = date.getFullYear(); // แปลงเป็น พ.ศ.
+                            const year = date.getFullYear();
                             const time = date.toTimeString().slice(0, 5);
                             return `${day}/${month}/${year} ${time}`;
                           })()
