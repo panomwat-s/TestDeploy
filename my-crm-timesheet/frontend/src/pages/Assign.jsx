@@ -298,6 +298,7 @@ export default function Assign() {
                   <th className="th">ผู้รับผิดชอบ</th>
                   <th className="th">ความสำคัญ</th>
                   <th className="th">สถานะ</th>
+                  <th className="th">วันที่เปิดงาน</th>
                   <th className="th">วันกำหนด</th>
                 </tr>
               </thead>
@@ -334,6 +335,7 @@ export default function Assign() {
                         {statusLabel(t.status)}
                       </span>
                     </td>
+                    <td className="td">{t.created_at ? ("" + t.created_at).slice(0, 10) : "-"}</td>
                     <td className="td">{t.due_date ? ("" + t.due_date).slice(0, 10) : "-"}</td>
                   </tr>
                 ))}
